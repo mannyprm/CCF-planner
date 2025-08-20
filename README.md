@@ -1,6 +1,24 @@
 # Cape Christian Sermon Planning System
 
-A comprehensive sermon planning and management platform built with AppFlowy, React, Node.js, and PostgreSQL.
+A comprehensive sermon planning and management platform for Cape Christian Fellowship, enabling collaborative annual planning, sermon series management, and multi-format content exports.
+
+## 🎯 Features
+
+- **Annual Planning**: Manage 52 sermons across 12 series with 8 annual themes
+- **Collaborative Editing**: Real-time collaboration with role-based access control
+- **Drag-and-Drop Interface**: Intuitive sermon scheduling and series management
+- **Multi-Format Exports**: PDF, Excel, iCal, and JSON export capabilities
+- **Firebase Authentication**: Secure Gmail SSO with role-based permissions
+- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
+
+## 🛠️ Tech Stack
+
+- **Frontend**: React 18 + TypeScript + shadcn/ui + Tailwind CSS
+- **Backend**: Node.js + Express.js + TypeScript
+- **Database**: PostgreSQL with Knex.js ORM
+- **Authentication**: Firebase Auth with Gmail SSO
+- **Caching**: Redis for performance optimization
+- **Deployment**: DigitalOcean App Platform
 
 ## 🚀 Quick Start
 
