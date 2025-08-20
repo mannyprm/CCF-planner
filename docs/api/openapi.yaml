@@ -1,0 +1,1429 @@
+openapi: 3.0.3
+info:
+  title: Cape Christian Sermon Planning API
+  description: RESTful API for sermon planning and management system
+  version: 1.0.0
+  contact:
+    name: Cape Christian Tech Team
+    email: tech@capechristian.org
+
+servers:
+  - url: https://api.sermons.capechristian.org/v1
+    description: Production server
+  - url: http://localhost:8080/api/v1
+    description: Development server
+
+security:
+  - bearerAuth: []
+
+paths:
+  # Authentication
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login with Firebase token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firebaseToken:
+                  type: string
+                  description: Firebase ID token from client
+      responses:
+        200:
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Logout current session
+      responses:
+        200:
+          description: Logout successful
+
+  /auth/profile:
+    get:
+      tags: [Authentication]
+      summary: Get current user profile
+      responses:
+        200:
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  # Workspaces
+  /workspaces:
+    get:
+      tags: [Workspaces]
+      summary: List all workspaces
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [annual, series, sermon, meeting, resource]
+      responses:
+        200:
+          description: List of workspaces
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Workspace'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags: [Workspaces]
+      summary: Create new workspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceCreate'
+      responses:
+        201:
+          description: Workspace created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+
+  /workspaces/{id}:
+    get:
+      tags: [Workspaces]
+      summary: Get workspace by ID
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        200:
+          description: Workspace details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+
+    put:
+      tags: [Workspaces]
+      summary: Update workspace
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceUpdate'
+      responses:
+        200:
+          description: Workspace updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+
+    delete:
+      tags: [Workspaces]
+      summary: Delete workspace
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        204:
+          description: Workspace deleted
+
+  # Sermon Series
+  /series:
+    get:
+      tags: [Series]
+      summary: List sermon series
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: year
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [planning, active, completed, archived]
+      responses:
+        200:
+          description: List of sermon series
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SermonSeries'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags: [Series]
+      summary: Create new sermon series
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SermonSeriesCreate'
+      responses:
+        201:
+          description: Series created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SermonSeries'
+
+  /series/{id}:
+    get:
+      tags: [Series]
+      summary: Get series by ID
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        200:
+          description: Series details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SermonSeries'
+
+    put:
+      tags: [Series]
+      summary: Update series
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SermonSeriesUpdate'
+      responses:
+        200:
+          description: Series updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SermonSeries'
+
+    delete:
+      tags: [Series]
+      summary: Delete series
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        204:
+          description: Series deleted
+
+  /series/{id}/sermons:
+    get:
+      tags: [Series]
+      summary: Get sermons in series
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        200:
+          description: List of sermons in series
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Sermon'
+
+  # Sermons
+  /sermons:
+    get:
+      tags: [Sermons]
+      summary: List sermons
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: seriesId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: speakerId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, review, approved, delivered, archived]
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        200:
+          description: List of sermons
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Sermon'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags: [Sermons]
+      summary: Create new sermon
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SermonCreate'
+      responses:
+        201:
+          description: Sermon created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sermon'
+
+  /sermons/{id}:
+    get:
+      tags: [Sermons]
+      summary: Get sermon by ID
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        200:
+          description: Sermon details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sermon'
+
+    put:
+      tags: [Sermons]
+      summary: Update sermon
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SermonUpdate'
+      responses:
+        200:
+          description: Sermon updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sermon'
+
+    delete:
+      tags: [Sermons]
+      summary: Delete sermon
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        204:
+          description: Sermon deleted
+
+  /sermons/{id}/timeline:
+    get:
+      tags: [Sermons]
+      summary: Get sermon timeline
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        200:
+          description: Timeline phases
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TimelinePhase'
+
+    post:
+      tags: [Sermons]
+      summary: Update timeline phase
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TimelinePhaseUpdate'
+      responses:
+        200:
+          description: Timeline updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimelinePhase'
+
+  # Timeline
+  /timeline/events:
+    get:
+      tags: [Timeline]
+      summary: Get timeline events
+      parameters:
+        - name: dateFrom
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: phase
+          in: query
+          schema:
+            type: string
+            enum: [brainstorm, content_planning, wordsmith, review, production, rehearsal, delivery, archive]
+      responses:
+        200:
+          description: Timeline events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TimelineEvent'
+
+  /timeline/calendar:
+    get:
+      tags: [Timeline]
+      summary: Get calendar view
+      parameters:
+        - name: month
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Calendar data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalendarView'
+
+  # Meetings
+  /meetings:
+    get:
+      tags: [Meetings]
+      summary: List meetings
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [series_planning, content_planning, wordsmith, review, other]
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        200:
+          description: List of meetings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Meeting'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags: [Meetings]
+      summary: Schedule new meeting
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MeetingCreate'
+      responses:
+        201:
+          description: Meeting scheduled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Meeting'
+
+  # Assets
+  /assets/upload:
+    post:
+      tags: [Assets]
+      summary: Upload file asset
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                entityId:
+                  type: string
+                  format: uuid
+                entityType:
+                  type: string
+                  enum: [sermon, series, meeting, workspace]
+                tags:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        201:
+          description: Asset uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+
+  /assets/{id}:
+    get:
+      tags: [Assets]
+      summary: Get asset metadata
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        200:
+          description: Asset metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+
+    delete:
+      tags: [Assets]
+      summary: Delete asset
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        204:
+          description: Asset deleted
+
+  # Exports
+  /exports/generate:
+    post:
+      tags: [Exports]
+      summary: Generate export
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportRequest'
+      responses:
+        202:
+          description: Export job created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportJob'
+
+  /exports/{id}:
+    get:
+      tags: [Exports]
+      summary: Get export status
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        200:
+          description: Export job status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportJob'
+
+  /exports/list:
+    get:
+      tags: [Exports]
+      summary: List export history
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        200:
+          description: Export history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ExportJob'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  schemas:
+    # Auth Schemas
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+        user:
+          $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        avatarUrl:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: object
+        lastLogin:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    # Workspace Schemas
+    Workspace:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [annual, series, sermon, meeting, resource]
+        icon:
+          type: string
+        color:
+          type: string
+        settings:
+          type: object
+        createdBy:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    WorkspaceCreate:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [annual, series, sermon, meeting, resource]
+        icon:
+          type: string
+        color:
+          type: string
+        settings:
+          type: object
+
+    WorkspaceUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+        settings:
+          type: object
+
+    # Series Schemas
+    SermonSeries:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        subtitle:
+          type: string
+        theme:
+          type: string
+        description:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        seriesNumber:
+          type: integer
+        artworkUrl:
+          type: string
+        keyScriptures:
+          type: array
+          items:
+            type: string
+        topics:
+          type: array
+          items:
+            type: string
+        targetAudience:
+          type: string
+        goals:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [planning, active, completed, archived]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    SermonSeriesCreate:
+      type: object
+      required: [title, startDate, endDate]
+      properties:
+        title:
+          type: string
+        subtitle:
+          type: string
+        theme:
+          type: string
+        description:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        seriesNumber:
+          type: integer
+        keyScriptures:
+          type: array
+          items:
+            type: string
+        topics:
+          type: array
+          items:
+            type: string
+        targetAudience:
+          type: string
+        goals:
+          type: array
+          items:
+            type: string
+
+    SermonSeriesUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        subtitle:
+          type: string
+        theme:
+          type: string
+        description:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        artworkUrl:
+          type: string
+        keyScriptures:
+          type: array
+          items:
+            type: string
+        topics:
+          type: array
+          items:
+            type: string
+        targetAudience:
+          type: string
+        goals:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [planning, active, completed, archived]
+
+    # Sermon Schemas
+    Sermon:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        seriesId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        subtitle:
+          type: string
+        sermonNumber:
+          type: integer
+        speakerId:
+          type: string
+          format: uuid
+        speakerName:
+          type: string
+        scheduledDate:
+          type: string
+          format: date
+        deliveredDate:
+          type: string
+          format: date
+        serviceTime:
+          type: string
+          format: time
+        durationMinutes:
+          type: integer
+        primaryScripture:
+          type: string
+        scriptureReferences:
+          type: array
+          items:
+            type: string
+        topics:
+          type: array
+          items:
+            type: string
+        keywords:
+          type: array
+          items:
+            type: string
+        summary:
+          type: string
+        keyPoints:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [draft, review, approved, delivered, archived]
+        timelinePhase:
+          type: string
+        callToAction:
+          type: string
+        targetAudience:
+          type: string
+        ministryFocus:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    SermonCreate:
+      type: object
+      required: [title, scheduledDate]
+      properties:
+        seriesId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        subtitle:
+          type: string
+        sermonNumber:
+          type: integer
+        speakerName:
+          type: string
+        scheduledDate:
+          type: string
+          format: date
+        serviceTime:
+          type: string
+          format: time
+        primaryScripture:
+          type: string
+        scriptureReferences:
+          type: array
+          items:
+            type: string
+        topics:
+          type: array
+          items:
+            type: string
+        keywords:
+          type: array
+          items:
+            type: string
+        summary:
+          type: string
+        keyPoints:
+          type: array
+          items:
+            type: string
+        callToAction:
+          type: string
+        targetAudience:
+          type: string
+        ministryFocus:
+          type: string
+
+    SermonUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        subtitle:
+          type: string
+        sermonNumber:
+          type: integer
+        speakerName:
+          type: string
+        scheduledDate:
+          type: string
+          format: date
+        deliveredDate:
+          type: string
+          format: date
+        serviceTime:
+          type: string
+          format: time
+        durationMinutes:
+          type: integer
+        primaryScripture:
+          type: string
+        scriptureReferences:
+          type: array
+          items:
+            type: string
+        topics:
+          type: array
+          items:
+            type: string
+        keywords:
+          type: array
+          items:
+            type: string
+        summary:
+          type: string
+        keyPoints:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [draft, review, approved, delivered, archived]
+        timelinePhase:
+          type: string
+        callToAction:
+          type: string
+        targetAudience:
+          type: string
+        ministryFocus:
+          type: string
+
+    # Timeline Schemas
+    TimelinePhase:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sermonId:
+          type: string
+          format: uuid
+        phase:
+          type: string
+          enum: [brainstorm, content_planning, wordsmith, review, production, rehearsal, delivery, archive]
+        scheduledStart:
+          type: string
+          format: date-time
+        scheduledEnd:
+          type: string
+          format: date-time
+        actualStart:
+          type: string
+          format: date-time
+        actualEnd:
+          type: string
+          format: date-time
+        assignedTo:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, in_progress, completed, skipped]
+        notes:
+          type: string
+        checklist:
+          type: array
+          items:
+            type: object
+            properties:
+              task:
+                type: string
+              completed:
+                type: boolean
+
+    TimelinePhaseUpdate:
+      type: object
+      properties:
+        phase:
+          type: string
+          enum: [brainstorm, content_planning, wordsmith, review, production, rehearsal, delivery, archive]
+        scheduledStart:
+          type: string
+          format: date-time
+        scheduledEnd:
+          type: string
+          format: date-time
+        actualStart:
+          type: string
+          format: date-time
+        actualEnd:
+          type: string
+          format: date-time
+        assignedTo:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, in_progress, completed, skipped]
+        notes:
+          type: string
+        checklist:
+          type: array
+          items:
+            type: object
+            properties:
+              task:
+                type: string
+              completed:
+                type: boolean
+
+    TimelineEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        type:
+          type: string
+        date:
+          type: string
+          format: date-time
+        phase:
+          type: string
+        sermonId:
+          type: string
+          format: uuid
+        sermonTitle:
+          type: string
+        assignedTo:
+          type: string
+          format: uuid
+        assignedToName:
+          type: string
+
+    # Meeting Schemas
+    Meeting:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        type:
+          type: string
+          enum: [series_planning, content_planning, wordsmith, review, other]
+        description:
+          type: string
+        location:
+          type: string
+        scheduledTime:
+          type: string
+          format: date-time
+        durationMinutes:
+          type: integer
+        attendees:
+          type: array
+          items:
+            type: string
+            format: uuid
+        agenda:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+        actionItems:
+          type: array
+          items:
+            type: object
+            properties:
+              task:
+                type: string
+              assignedTo:
+                type: string
+                format: uuid
+              dueDate:
+                type: string
+                format: date
+        relatedSermonId:
+          type: string
+          format: uuid
+        relatedSeriesId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [scheduled, in_progress, completed, cancelled]
+
+    MeetingCreate:
+      type: object
+      required: [title, type, scheduledTime]
+      properties:
+        title:
+          type: string
+        type:
+          type: string
+          enum: [series_planning, content_planning, wordsmith, review, other]
+        description:
+          type: string
+        location:
+          type: string
+        scheduledTime:
+          type: string
+          format: date-time
+        durationMinutes:
+          type: integer
+          default: 60
+        attendees:
+          type: array
+          items:
+            type: string
+            format: uuid
+        agenda:
+          type: array
+          items:
+            type: string
+        relatedSermonId:
+          type: string
+          format: uuid
+        relatedSeriesId:
+          type: string
+          format: uuid
+
+    # Asset Schemas
+    Asset:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        entityId:
+          type: string
+          format: uuid
+        entityType:
+          type: string
+          enum: [sermon, series, meeting, workspace]
+        fileName:
+          type: string
+        fileType:
+          type: string
+        mimeType:
+          type: string
+        sizeBytes:
+          type: integer
+        s3Url:
+          type: string
+        cdnUrl:
+          type: string
+        thumbnailUrl:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        uploadedBy:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+
+    # Export Schemas
+    ExportRequest:
+      type: object
+      required: [entityType, format]
+      properties:
+        entityId:
+          type: string
+          format: uuid
+        entityType:
+          type: string
+          enum: [sermon, series, annual_plan, calendar]
+        format:
+          type: string
+          enum: [pdf, xlsx, docx, ical, json, csv]
+        dateRangeStart:
+          type: string
+          format: date
+        dateRangeEnd:
+          type: string
+          format: date
+        filters:
+          type: object
+          properties:
+            status:
+              type: array
+              items:
+                type: string
+            speakers:
+              type: array
+              items:
+                type: string
+                format: uuid
+            series:
+              type: array
+              items:
+                type: string
+                format: uuid
+
+    ExportJob:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        entityId:
+          type: string
+          format: uuid
+        entityType:
+          type: string
+          enum: [sermon, series, annual_plan, calendar]
+        format:
+          type: string
+          enum: [pdf, xlsx, docx, ical, json, csv]
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        fileUrl:
+          type: string
+        errorMessage:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+
+    # Calendar Schemas
+    CalendarView:
+      type: object
+      properties:
+        month:
+          type: integer
+        year:
+          type: integer
+        weeks:
+          type: array
+          items:
+            type: object
+            properties:
+              weekNumber:
+                type: integer
+              days:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    date:
+                      type: string
+                      format: date
+                    events:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            format: uuid
+                          type:
+                            type: string
+                            enum: [sermon, meeting, timeline_phase]
+                          title:
+                            type: string
+                          time:
+                            type: string
+                            format: time
+                          phase:
+                            type: string
+
+    # Utility Schemas
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+        hasNext:
+          type: boolean
+        hasPrev:
+          type: boolean
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object

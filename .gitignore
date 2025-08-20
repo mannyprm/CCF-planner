@@ -1,0 +1,103 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+*.lcov
+
+# Production
+build/
+dist/
+
+# Misc
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+logs/
+*.log
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+
+# Uploads
+uploads/
+temp/
+
+# Backups
+backups/
+*.backup
+*.sql.gz
+
+# Docker
+.docker/
+
+# Cache
+.cache/
+*.cache
+
+# SSL
+certs/
+*.pem
+*.key
+*.crt
+
+# Claude Flow generated files
+.claude/settings.local.json
+.mcp.json
+claude-flow.config.json
+.swarm/
+.hive-mind/
+memory/claude-flow-data.json
+memory/sessions/*
+!memory/sessions/README.md
+memory/agents/*
+!memory/agents/README.md
+coordination/memory_bank/*
+coordination/subtasks/*
+coordination/orchestration/*
+*.db
+*.db-journal
+*.db-wal
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+claude-flow
+claude-flow.bat
+claude-flow.ps1
+hive-mind-prompt-*.txt
+
+# External repositories (should not be committed)
+appflowy/
+AppFlowy/
+AppFlowy-IO/
+
+# IDE and editor specific files
+.cursor/
+.windsurfrules
+.superdesign/
+.roo/
+.roomodes
+
+# macOS specific
+.DS_Store
+
+# Package lock files (keep only one)
+package-lock.json
