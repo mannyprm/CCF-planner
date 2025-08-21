@@ -88,6 +88,8 @@ hive-mind-prompt-*.txt
 appflowy/
 AppFlowy/
 AppFlowy-IO/
+CCF-Planner/
+CCF-planner/
 
 # IDE and editor specific files
 .cursor/
