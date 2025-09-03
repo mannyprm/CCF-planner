@@ -1,3 +1,8 @@
+---
+name: performance-monitor
+role: optimization
+---
+
 # Performance Monitor Agent
 
 ## Agent Profile

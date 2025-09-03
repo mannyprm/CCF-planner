@@ -1,0 +1,68 @@
+# Multi-stage build for CCF-planner with AppFlowy
+FROM node:20-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache python3 make g++ git
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY src/frontend/package*.json ./src/frontend/
+COPY src/backend/package*.json ./src/backend/
+
+# Install dependencies
+RUN npm ci
+RUN cd src/frontend && npm ci
+RUN cd src/backend && npm ci
+
+# Copy source code
+COPY . .
+
+# Build frontend and backend
+RUN cd src/frontend && npm run build
+RUN cd src/backend && npm run build
+
+# Production stage
+FROM node:20-alpine
+
+# Install runtime dependencies
+RUN apk add --no-cache curl nginx supervisor
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Set working directory
+WORKDIR /app
+
+# Copy built application from builder
+COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/src/frontend/dist ./src/frontend/dist
+COPY --from=builder --chown=nodejs:nodejs /app/src/backend/dist ./src/backend/dist
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/package*.json ./
+
+# Copy nginx configuration
+COPY deploy/digitalocean/nginx/nginx.prod.conf /etc/nginx/nginx.conf
+
+# Copy supervisor configuration
+COPY deploy/digitalocean/supervisor.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Create necessary directories
+RUN mkdir -p /var/log/supervisor /var/run/supervisor && \
+    chown -R nodejs:nodejs /var/log/supervisor /var/run/supervisor
+
+# Expose port
+EXPOSE 80
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost/health || exit 1
+
+# Switch to non-root user
+USER nodejs
+
+# Start supervisor
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

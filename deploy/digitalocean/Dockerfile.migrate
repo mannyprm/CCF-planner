@@ -1,0 +1,31 @@
+# Migration runner for CCF-planner
+FROM node:20-alpine
+
+# Install dependencies
+RUN apk add --no-cache postgresql-client
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY src/backend/package*.json ./src/backend/
+
+# Install dependencies
+RUN npm ci --only=production
+RUN cd src/backend && npm ci --only=production
+
+# Copy migration files
+COPY src/backend/src/migrations ./src/backend/src/migrations
+COPY src/backend/dist ./src/backend/dist
+
+# Create migration script
+RUN echo '#!/bin/sh\n\
+echo "Running database migrations..."\n\
+cd src/backend\n\
+npm run migrate\n\
+echo "Migrations complete!"' > /app/migrate.sh && \
+chmod +x /app/migrate.sh
+
+# Run migrations
+CMD ["/app/migrate.sh"]

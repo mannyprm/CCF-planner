@@ -1,0 +1,201 @@
+version: '3.8'
+
+# Production deployment configuration for DigitalOcean
+# Will use DigitalOcean's temporary domain (e.g., your-app-name.ondigitalocean.app)
+
+services:
+  # AppFlowy Cloud Services
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - appflowy-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: always
+    networks:
+      - appflowy-network
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  minio:
+    image: minio/minio
+    container_name: minio
+    restart: always
+    environment:
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_KEY:-minioadmin}
+    volumes:
+      - minio_data:/data
+    networks:
+      - appflowy-network
+    command: server /data --console-address ":9001"
+
+  gotrue:
+    image: appflowyinc/gotrue:latest
+    container_name: gotrue
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - GOTRUE_DATABASE_URL=${GOTRUE_DATABASE_URL}
+      - GOTRUE_JWT_SECRET=${GOTRUE_JWT_SECRET}
+      - GOTRUE_ADMIN_EMAIL=${GOTRUE_ADMIN_EMAIL:-admin@example.com}
+      - GOTRUE_ADMIN_PASSWORD=${GOTRUE_ADMIN_PASSWORD:-password}
+      - GOTRUE_SITE_URL=${GOTRUE_SITE_URL}
+      - API_EXTERNAL_URL=${API_EXTERNAL_URL}
+    networks:
+      - appflowy-network
+
+  appflowy_cloud:
+    image: appflowyinc/appflowy_cloud:latest
+    container_name: appflowy_cloud
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      gotrue:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      - APPFLOWY_DATABASE_URL=${APPFLOWY_DATABASE_URL}
+      - APPFLOWY_REDIS_URI=${APPFLOWY_REDIS_URI}
+      - APPFLOWY_GOTRUE_BASE_URL=${APPFLOWY_GOTRUE_BASE_URL}
+      - APPFLOWY_S3_ACCESS_KEY=${AWS_ACCESS_KEY}
+      - APPFLOWY_S3_SECRET_KEY=${AWS_SECRET_KEY}
+      - APPFLOWY_S3_BUCKET=${APPFLOWY_S3_BUCKET:-appflowy}
+      - APPFLOWY_S3_REGION=${APPFLOWY_S3_REGION:-us-east-1}
+      - APPFLOWY_S3_MINIO_URL=${APPFLOWY_S3_MINIO_URL}
+      - APPFLOWY_ACCESS_CONTROL=${APPFLOWY_ACCESS_CONTROL:-true}
+      - APPFLOWY_DATABASE_MAX_CONNECTIONS=${APPFLOWY_DATABASE_MAX_CONNECTIONS:-40}
+    networks:
+      - appflowy-network
+
+  appflowy_web:
+    image: appflowyinc/appflowy_web:latest
+    container_name: appflowy_web
+    restart: always
+    environment:
+      - NEXT_PUBLIC_APPFLOWY_CLOUD_URL=${APPFLOWY_BASE_URL}
+    networks:
+      - appflowy-network
+
+  admin_frontend:
+    image: appflowyinc/admin_frontend:latest
+    container_name: admin_frontend
+    restart: always
+    depends_on:
+      - gotrue
+      - postgres
+    environment:
+      - ADMIN_FRONTEND_REDIS_URL=${ADMIN_FRONTEND_REDIS_URL}
+      - ADMIN_FRONTEND_GOTRUE_URL=${ADMIN_FRONTEND_GOTRUE_URL}
+    networks:
+      - appflowy-network
+
+  ai:
+    image: appflowyinc/appflowy_ai:latest
+    container_name: appflowy_ai
+    restart: always
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - AI_DATABASE_URL=${AI_DATABASE_URL}
+      - AI_REDIS_URL=${AI_REDIS_URL}
+      - AI_OPENAI_API_KEY=${AI_OPENAI_API_KEY}
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - JINA_API_KEY=${JINA_API_KEY}
+    networks:
+      - appflowy-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - certbot-webroot:/var/www/certbot
+      - certbot-conf:/etc/letsencrypt
+    depends_on:
+      - appflowy_cloud
+      - appflowy_web
+      - admin_frontend
+    networks:
+      - appflowy-network
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - certbot-webroot:/var/www/certbot
+      - certbot-conf:/etc/letsencrypt
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - appflowy-network
+
+  # CCF-Planner Services
+  ccf_backend:
+    build: ../../src/backend
+    container_name: ccf_backend
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - APPFLOWY_API_URL=http://appflowy_cloud:8000
+      - JWT_SECRET=${JWT_SECRET}
+      - JINA_API_KEY=${JINA_API_KEY}
+      - BRAVE_SEARCH_KEY=${BRAVE_SEARCH_KEY}
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - appflowy-network
+
+  ccf_frontend:
+    build: ../../src/frontend
+    container_name: ccf_frontend
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - REACT_APP_API_URL=${API_URL}
+      - REACT_APP_APPFLOWY_URL=${APPFLOWY_BASE_URL}
+    depends_on:
+      - ccf_backend
+    networks:
+      - appflowy-network
+
+networks:
+  appflowy-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  certbot-webroot:
+  certbot-conf:

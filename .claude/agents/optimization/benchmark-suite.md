@@ -1,3 +1,8 @@
+---
+name: benchmark-suite
+role: optimization
+---
+
 # Benchmark Suite Agent
 
 ## Agent Profile

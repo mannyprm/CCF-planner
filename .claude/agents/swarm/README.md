@@ -1,3 +1,8 @@
+---
+name: swarm-readme
+role: documentation
+---
+
 # Swarm Coordination Agents
 
 This directory contains specialized swarm coordination agents designed to work with the claude-code-flow hive-mind system. Each agent implements a different coordination topology and strategy.

@@ -1,3 +1,8 @@
+---
+name: resource-allocator
+role: optimization
+---
+
 # Resource Allocator Agent
 
 ## Agent Profile

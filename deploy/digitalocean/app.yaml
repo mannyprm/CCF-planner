@@ -1,0 +1,123 @@
+name: ccf-planner-appflowy
+region: nyc
+features:
+  - buildpack-stack=ubuntu-22
+
+services:
+  # Main web service combining AppFlowy and CCF-planner
+  - name: web
+    github:
+      repo: mannyprm/CCF-planner
+      branch: main
+      deploy_on_push: true
+    dockerfile_path: deploy/digitalocean/Dockerfile.web
+    source_dir: /
+    instance_count: 1
+    instance_size_slug: professional-xs
+    http_port: 80
+    
+    envs:
+      # Node environment
+      - key: NODE_ENV
+        value: production
+      
+      # Database connection (will be auto-filled by DigitalOcean)
+      - key: DATABASE_URL
+        value: ${ccf-db.DATABASE_URL}
+      
+      # Redis connection
+      - key: REDIS_URL
+        value: ${ccf-redis.REDIS_URL}
+      
+      # AppFlowy settings
+      - key: APPFLOWY_DATABASE_URL
+        value: ${ccf-db.DATABASE_URL}
+      
+      - key: APPFLOWY_REDIS_URI
+        value: ${ccf-redis.REDIS_URL}
+      
+      # JWT Secret (generate a secure one)
+      - key: JWT_SECRET
+        value: "CHANGE_THIS_TO_RANDOM_SECRET_MIN_32_CHARS"
+        type: SECRET
+      
+      # Admin credentials (CHANGE THESE!)
+      - key: GOTRUE_ADMIN_EMAIL
+        value: "admin@example.com"
+      
+      - key: GOTRUE_ADMIN_PASSWORD
+        value: "CHANGE_THIS_STRONG_PASSWORD"
+        type: SECRET
+      
+      # API Keys (add your actual keys)
+      - key: JINA_API_KEY
+        value: ""
+        type: SECRET
+      
+      - key: BRAVE_SEARCH_KEY
+        value: ""
+        type: SECRET
+      
+      # S3/Object Storage (using Spaces)
+      - key: AWS_ACCESS_KEY
+        value: ${ccf-spaces.ACCESS_KEY}
+        type: SECRET
+      
+      - key: AWS_SECRET_KEY
+        value: ${ccf-spaces.SECRET_KEY}
+        type: SECRET
+      
+      - key: APPFLOWY_S3_BUCKET
+        value: "ccf-planner-storage"
+      
+      - key: APPFLOWY_S3_REGION
+        value: "nyc3"
+      
+      - key: APPFLOWY_S3_MINIO_URL
+        value: "https://nyc3.digitaloceanspaces.com"
+    
+    health_check:
+      http_path: /health
+      initial_delay_seconds: 30
+      period_seconds: 30
+      timeout_seconds: 10
+      success_threshold: 1
+      failure_threshold: 3
+
+# Databases
+databases:
+  # PostgreSQL database
+  - name: ccf-db
+    engine: PG
+    version: "16"
+    size: db-s-1vcpu-1gb
+    num_nodes: 1
+    
+  # Redis cache
+  - name: ccf-redis
+    engine: REDIS
+    version: "7"
+    size: db-s-1vcpu-1gb
+    num_nodes: 1
+
+# Static files storage (DigitalOcean Spaces)
+# Note: Spaces must be created manually in DigitalOcean dashboard
+# Create a Space named "ccf-planner-storage" in nyc3 region
+
+# Jobs for database migrations
+jobs:
+  - name: migrate
+    kind: PRE_DEPLOY
+    github:
+      repo: mannyprm/CCF-planner
+      branch: main
+    dockerfile_path: deploy/digitalocean/Dockerfile.migrate
+    source_dir: /
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    
+    envs:
+      - key: DATABASE_URL
+        value: ${ccf-db.DATABASE_URL}
+      
+    run_command: npm run migrate

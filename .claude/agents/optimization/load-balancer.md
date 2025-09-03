@@ -1,3 +1,8 @@
+---
+name: load-balancer
+role: optimization
+---
+
 # Load Balancing Coordinator Agent
 
 ## Agent Profile
