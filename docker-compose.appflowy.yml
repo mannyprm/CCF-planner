@@ -1,0 +1,158 @@
+version: '3.8'
+
+# Docker Compose configuration for integrating AppFlowy Cloud with CCF-planner
+# This creates a unified environment with all services accessible through port 6780
+
+services:
+  # CCF-planner backend API
+  ccf-backend:
+    build: ./src/backend
+    container_name: ccf-backend
+    ports:
+      - "6781:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - APPFLOWY_API=http://appflowy-cloud:8000
+      - APPFLOWY_ADMIN_URL=http://admin_frontend:3000
+      - DATABASE_URL=postgres://postgres:password@appflowy-postgres:5432/ccf_planner
+      - REDIS_URL=redis://appflowy-redis:6379
+      - JINA_API_KEY=${JINA_API_KEY}
+      - BRAVE_SEARCH_KEY=${BRAVE_SEARCH_KEY}
+    depends_on:
+      - appflowy-postgres
+      - appflowy-redis
+    networks:
+      - appflowy-network
+    volumes:
+      - ./src/backend:/app
+      - /app/node_modules
+
+  # CCF-planner frontend
+  ccf-frontend:
+    build: ./src/frontend
+    container_name: ccf-frontend
+    ports:
+      - "6782:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:6781
+      - REACT_APP_APPFLOWY_URL=http://localhost:6780
+    depends_on:
+      - ccf-backend
+    networks:
+      - appflowy-network
+    volumes:
+      - ./src/frontend:/app
+      - /app/node_modules
+
+  # Playwright test runner
+  playwright-tests:
+    image: mcr.microsoft.com/playwright:v1.40.0-jammy
+    container_name: playwright-tests
+    environment:
+      - APPFLOWY_URL=http://nginx:80
+      - CCF_API_URL=http://ccf-backend:3000
+      - HEADLESS=true
+    volumes:
+      - ./tests/e2e:/tests
+      - ./playwright-results:/results
+    networks:
+      - appflowy-network
+    depends_on:
+      - ccf-backend
+      - ccf-frontend
+    command: npx playwright test
+
+  # JinaAI integration service
+  jina-service:
+    image: jinaai/jina:latest
+    container_name: jina-service
+    ports:
+      - "6785:8000"
+    environment:
+      - JINA_API_KEY=${JINA_API_KEY}
+      - JINA_LOG_LEVEL=INFO
+    volumes:
+      - ./ai-models:/models
+      - ./ai-data:/data
+    networks:
+      - appflowy-network
+
+  # BrightData proxy (for web scraping)
+  brightdata-proxy:
+    image: luminati/proxy:latest
+    container_name: brightdata-proxy
+    ports:
+      - "6786:24000"
+    environment:
+      - CUSTOMER=${BRIGHTDATA_CUSTOMER}
+      - PASSWORD=${BRIGHTDATA_PASSWORD}
+      - ZONE=${BRIGHTDATA_ZONE}
+    networks:
+      - appflowy-network
+
+  # Vector database for AI embeddings
+  vector-db:
+    image: qdrant/qdrant
+    container_name: vector-db
+    ports:
+      - "6787:6333"
+    volumes:
+      - ./vector-storage:/qdrant/storage
+    networks:
+      - appflowy-network
+
+  # Monitoring with Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "6788:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    networks:
+      - appflowy-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "6789:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=redis-datasource
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana:/etc/grafana/provisioning
+    networks:
+      - appflowy-network
+    depends_on:
+      - prometheus
+
+  # Nginx reverse proxy for unified access
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    ports:
+      - "6790:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - appflowy-network
+    depends_on:
+      - ccf-backend
+      - ccf-frontend
+
+networks:
+  appflowy-network:
+    external:
+      name: appflowy-cloud_default
+
+volumes:
+  prometheus-data:
+  grafana-data:

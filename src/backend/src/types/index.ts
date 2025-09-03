@@ -429,8 +429,7 @@ export class ValidationErrorClass extends AppError {
   public readonly errors: ValidationError[];
 
   constructor(errors: ValidationError[]) {
-    super('Validation failed');
-    this.statusCode = 400;
+    super('Validation failed', 400);
     this.errors = errors;
   }
 }
