@@ -1,23 +1,23 @@
 import { Router, Request, Response } from 'express';
 import { MCPService } from '../services/mcp/MCPService';
 import { asyncHandler } from '../middleware/asyncHandler';
-import { authenticate } from '../middleware/auth';
+import { authMiddleware } from '../middleware/auth';
 import { logger } from '../utils/logger';
 
 const router = Router();
 const mcpService = MCPService.getInstance();
 
 // List all MCP connections
-router.get('/connections', authenticate, asyncHandler(async (req: Request, res: Response) => {
+router.get('/connections', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
   const connections = mcpService.getConnections();
-  res.json({
+  return res.json({
     success: true,
     data: connections,
   });
 }));
 
 // Get specific connection status
-router.get('/connections/:serverName', authenticate, asyncHandler(async (req: Request, res: Response) => {
+router.get('/connections/:serverName', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
   const { serverName } = req.params;
   const connection = mcpService.getConnection(serverName);
   
@@ -28,49 +28,49 @@ router.get('/connections/:serverName', authenticate, asyncHandler(async (req: Re
     });
   }
 
-  res.json({
+  return res.json({
     success: true,
     data: connection,
   });
 }));
 
 // Connect to a server
-router.post('/connections/:serverName/connect', authenticate, asyncHandler(async (req: Request, res: Response) => {
+router.post('/connections/:serverName/connect', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
   const { serverName } = req.params;
   
   await mcpService.connectServer(serverName);
   
-  res.json({
+  return res.json({
     success: true,
     message: `Connected to server ${serverName}`,
   });
 }));
 
 // Disconnect from a server
-router.post('/connections/:serverName/disconnect', authenticate, asyncHandler(async (req: Request, res: Response) => {
+router.post('/connections/:serverName/disconnect', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
   const { serverName } = req.params;
   
   await mcpService.disconnectServer(serverName);
   
-  res.json({
+  return res.json({
     success: true,
     message: `Disconnected from server ${serverName}`,
   });
 }));
 
 // List available tools
-router.get('/tools', authenticate, asyncHandler(async (req: Request, res: Response) => {
+router.get('/tools', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
   const { server } = req.query;
   const tools = await mcpService.listTools(server as string);
   
-  res.json({
+  return res.json({
     success: true,
     data: tools,
   });
 }));
 
 // Call a tool
-router.post('/tools/call', authenticate, asyncHandler(async (req: Request, res: Response) => {
+router.post('/tools/call', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
   const { server, tool, arguments: args, timeout } = req.body;
 
   if (!server || !tool) {
@@ -89,7 +89,7 @@ router.post('/tools/call', authenticate, asyncHandler(async (req: Request, res: 
     });
   }
 
-  res.json({
+  return res.json({
     success: true,
     data: result.result,
     metadata: result.metadata,
@@ -97,18 +97,18 @@ router.post('/tools/call', authenticate, asyncHandler(async (req: Request, res: 
 }));
 
 // List available resources
-router.get('/resources', authenticate, asyncHandler(async (req: Request, res: Response) => {
+router.get('/resources', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
   const { server } = req.query;
   const resources = await mcpService.listResources(server as string);
   
-  res.json({
+  return res.json({
     success: true,
     data: resources,
   });
 }));
 
 // Get a resource
-router.post('/resources/get', authenticate, asyncHandler(async (req: Request, res: Response) => {
+router.post('/resources/get', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
   const { server, uri, timeout } = req.body;
 
   if (!server || !uri) {
@@ -127,7 +127,7 @@ router.post('/resources/get', authenticate, asyncHandler(async (req: Request, re
     });
   }
 
-  res.json({
+  return res.json({
     success: true,
     data: result.result,
     metadata: result.metadata,

@@ -59,7 +59,7 @@ router.get('/',
 
     // Build WHERE conditions
     const conditions = ['s.workspace_id = $1'];
-    const params = [user.workspace_id];
+    const params: any[] = [user.workspace_id];
     let paramIndex = 2;
 
     if (series_id) {
@@ -321,7 +321,7 @@ router.post('/',
       last_updated: new Date()
     };
 
-    const params = [
+    const params: any[] = [
       user.workspace_id,
       sermonData.series_id || null,
       sermonData.title,

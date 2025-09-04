@@ -52,7 +52,7 @@ router.get('/',
 
     // Build WHERE conditions
     const conditions = ['ss.workspace_id = $1'];
-    const params = [user.workspace_id];
+    const params: any[] = [user.workspace_id];
     let paramIndex = 2;
 
     if (is_active !== undefined) {
@@ -330,7 +330,7 @@ router.put('/:id',
       let dateConflictQuery = `
         SELECT COUNT(*) as count FROM sermons 
         WHERE series_id = $1 AND (service_date < $2`;
-      let dateParams = [id, newStartDate];
+      let dateParams: any[] = [id, newStartDate];
 
       if (newEndDate) {
         dateConflictQuery += ` OR service_date > $3)`;
@@ -347,8 +347,8 @@ router.put('/:id',
     }
 
     // Build update query dynamically
-    const updateFields = [];
-    const params = [id, user.workspace_id];
+    const updateFields: string[] = [];
+    const params: any[] = [id, user.workspace_id];
     let paramIndex = 3;
 
     Object.entries(updateData).forEach(([key, value]) => {

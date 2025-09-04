@@ -6,6 +6,8 @@ export interface MCPServerConfig {
   env?: Record<string, string>;
   timeout?: number;
   retryPolicy?: RetryPolicy;
+  /** Auto-connect to the server on service initialization (default: true) */
+  autoConnect?: boolean;
 }
 
 export interface RetryPolicy {

@@ -1,4 +1,4 @@
-name: ccf-planner-appflowy
+name: ccf-planner
 region: nyc
 features:
   - buildpack-stack=ubuntu-22
@@ -59,12 +59,13 @@ services:
         type: SECRET
       
       # S3/Object Storage (using Spaces)
+      # Optional: configure Spaces credentials via DO console secrets if you plan to use S3-compatible storage
       - key: AWS_ACCESS_KEY
-        value: ${ccf-spaces.ACCESS_KEY}
+        value: ""
         type: SECRET
       
       - key: AWS_SECRET_KEY
-        value: ${ccf-spaces.SECRET_KEY}
+        value: ""
         type: SECRET
       
       - key: APPFLOWY_S3_BUCKET

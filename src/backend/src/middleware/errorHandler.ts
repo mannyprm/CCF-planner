@@ -5,7 +5,8 @@ import {
   AuthenticationError, 
   AuthorizationError, 
   NotFoundError, 
-  ConflictError 
+  ConflictError,
+  BusinessLogicError,
 } from '../types';
 import { logger } from '../utils/logger';
 
@@ -196,11 +197,7 @@ export class FileUploadError extends AppError {
   }
 }
 
-export class BusinessLogicError extends AppError {
-  constructor(message: string) {
-    super(message, 422);
-  }
-}
+// BusinessLogicError now exported from ../types
 
 /**
  * Validation helper for route parameters
