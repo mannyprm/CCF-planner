@@ -1,4 +1,4 @@
-name: ccf-planner-appflowy
+name: ccf-planner
 region: nyc
 features:
   - buildpack-stack=ubuntu-22
@@ -25,9 +25,9 @@ services:
       - key: DATABASE_URL
         value: ${ccf-db.DATABASE_URL}
       
-      # Redis connection
+      # Redis connection (optional). If unset, app falls back to in-memory rate limiting.
       - key: REDIS_URL
-        value: ${ccf-redis.REDIS_URL}
+        value: ""
       
       # AppFlowy settings
       - key: APPFLOWY_DATABASE_URL
@@ -59,12 +59,13 @@ services:
         type: SECRET
       
       # S3/Object Storage (using Spaces)
+      # Optional: configure Spaces credentials via DO console secrets if you plan to use S3-compatible storage
       - key: AWS_ACCESS_KEY
-        value: ${ccf-spaces.ACCESS_KEY}
+        value: ""
         type: SECRET
       
       - key: AWS_SECRET_KEY
-        value: ${ccf-spaces.SECRET_KEY}
+        value: ""
         type: SECRET
       
       - key: APPFLOWY_S3_BUCKET
@@ -86,17 +87,10 @@ services:
 
 # Databases
 databases:
-  # PostgreSQL database
+  # PostgreSQL database (optional - attach existing managed DB or set DATABASE_URL)
   - name: ccf-db
     engine: PG
     version: "16"
-    size: db-s-1vcpu-1gb
-    num_nodes: 1
-    
-  # Redis cache
-  - name: ccf-redis
-    engine: REDIS
-    version: "7"
     size: db-s-1vcpu-1gb
     num_nodes: 1
 

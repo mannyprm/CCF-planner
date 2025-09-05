@@ -106,8 +106,8 @@ const getClientId = (req: Request): string => {
   }
 
   // Fallback to IP address
-  const forwarded = req.headers['x-forwarded-for'] as string;
-  const ip = forwarded ? forwarded.split(',')[0] : req.connection.remoteAddress;
+  const forwarded = req.headers['x-forwarded-for'] as string | undefined;
+  const ip = forwarded ? forwarded.split(',')[0] : (req.connection.remoteAddress || 'unknown');
   return `ip:${ip}`;
 };
 
@@ -251,7 +251,7 @@ export const createWhitelistMiddleware = (
 ) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     const user = (req as any).user;
-    const clientIp = req.connection.remoteAddress;
+    const clientIp = (req.connection.remoteAddress || '') as string;
     const apiKey = req.headers['x-api-key'] as string;
 
     // Check IP whitelist

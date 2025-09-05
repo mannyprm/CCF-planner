@@ -19,16 +19,18 @@ import seriesRoutes from './routes/series';
 import sermonRoutes from './routes/sermons';
 import userRoutes from './routes/users';
 import exportRoutes from './routes/exports';
+import mcpRoutes from './routes/mcp';
 
 // Import services
 import { logger } from './utils/logger';
+import { MCPService } from './services/mcp/MCPService';
 
 // Initialize Express app
 const app: Express = express();
 const httpServer = createServer(app);
 
 // Port configuration
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 6780;
 
 // Middleware
 app.use(helmet());
@@ -66,6 +68,7 @@ app.use('/api/v1/series', seriesRoutes);
 app.use('/api/v1/sermons', sermonRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/exports', exportRoutes);
+app.use('/api/v1/mcp', mcpRoutes);
 
 // Welcome route
 app.get('/api/v1', (_req: Request, res: Response) => {
@@ -93,25 +96,38 @@ app.use((req: Request, res: Response) => {
 // Error handling middleware (must be last)
 app.use(errorHandler);
 
+// Initialize MCP Service
+const mcpService = MCPService.getInstance();
+
 // Start server
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, async () => {
   logger.info(`🚀 Server is running on port ${PORT}`);
   logger.info(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
   logger.info(`🔗 API URL: http://localhost:${PORT}/api/v1`);
   logger.info(`💚 Health check: http://localhost:${PORT}/health`);
+  
+  // Initialize MCP connections
+  try {
+    await mcpService.initialize();
+    logger.info('✅ MCP Service initialized successfully');
+  } catch (error) {
+    logger.error('❌ Failed to initialize MCP Service:', error);
+  }
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   logger.info('SIGTERM received. Shutting down gracefully...');
+  await mcpService.shutdown();
   httpServer.close(() => {
     logger.info('Server closed');
     process.exit(0);
   });
 });
 
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   logger.info('SIGINT received. Shutting down gracefully...');
+  await mcpService.shutdown();
   httpServer.close(() => {
     logger.info('Server closed');
     process.exit(0);

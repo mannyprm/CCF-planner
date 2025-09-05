@@ -51,7 +51,7 @@ router.post('/sermons',
 
     // Build query based on filters
     const conditions = ['s.workspace_id = $1'];
-    const params = [user.workspace_id];
+    const params: any[] = [user.workspace_id];
     let paramIndex = 2;
 
     if (exportRequest.date_range) {
@@ -313,7 +313,8 @@ async function exportToExcel(sermons: any[], exportRequest: ExportRequest): Prom
   }
 
   // Save to buffer
-  const buffer = await workbook.xlsx.writeBuffer();
+  const wbOut: any = await workbook.xlsx.writeBuffer();
+  const buffer: Buffer = Buffer.isBuffer(wbOut) ? wbOut : Buffer.from(wbOut);
   
   const filename = `sermons_export_${dayjs().format('YYYY-MM-DD_HH-mm-ss')}.xlsx`;
   const filepath = path.join('/tmp', filename);
@@ -525,7 +526,7 @@ router.get('/download/:filename',
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       
       const fileData = await fs.readFile(filepath);
-      res.send(fileData);
+      res.end(fileData);
 
       // Clean up file after download (async)
       setTimeout(async () => {

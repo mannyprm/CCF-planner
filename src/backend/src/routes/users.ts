@@ -49,11 +49,11 @@ router.get('/',
       search,
       sort_by,
       sort_order
-    } = req.query as UserQueryParams;
+  } = req.query as unknown as UserQueryParams;
 
     // Build WHERE conditions
     const conditions = ['u.workspace_id = $1'];
-    const params = [user.workspace_id];
+    const params: any[] = [user.workspace_id];
     let paramIndex = 2;
 
     if (role) {
@@ -383,8 +383,8 @@ router.put('/:id',
     }
 
     // Build update query dynamically
-    const updateFields = [];
-    const params = [id];
+    const updateFields: string[] = [];
+    const params: any[] = [id];
     let paramIndex = 2;
 
     // Only allow certain fields for self-updates

@@ -355,6 +355,16 @@ export interface SeriesQueryParams {
   sort_order?: 'asc' | 'desc';
 }
 
+export interface UserQueryParams {
+  page: number;
+  limit: number;
+  role?: UserRole;
+  is_active?: boolean;
+  search?: string;
+  sort_by?: 'created_at' | 'display_name' | 'last_login' | 'email' | 'role';
+  sort_order?: 'asc' | 'desc';
+}
+
 // ==================== EXPORT TYPES ====================
 
 export interface ExportRequest {
@@ -429,8 +439,7 @@ export class ValidationErrorClass extends AppError {
   public readonly errors: ValidationError[];
 
   constructor(errors: ValidationError[]) {
-    super('Validation failed');
-    this.statusCode = 400;
+    super('Validation failed', 400);
     this.errors = errors;
   }
 }
@@ -456,5 +465,11 @@ export class NotFoundError extends AppError {
 export class ConflictError extends AppError {
   constructor(message = 'Resource conflict') {
     super(message, 409);
+  }
+}
+
+export class BusinessLogicError extends AppError {
+  constructor(message = 'Business rule violated') {
+    super(message, 422);
   }
 }

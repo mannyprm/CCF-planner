@@ -21,6 +21,27 @@ export class RedisService implements CacheService {
     return RedisService.instance;
   }
 
+  // Static convenience wrappers to align with existing usages
+  static async get(key: string): Promise<string | null> {
+    return RedisService.getInstance().get(key);
+  }
+
+  static async set(key: string, value: string, ttl?: number): Promise<void> {
+    return RedisService.getInstance().set(key, value, ttl);
+  }
+
+  static async del(key: string): Promise<void> {
+    return RedisService.getInstance().del(key);
+  }
+
+  static async exists(key: string): Promise<boolean> {
+    return RedisService.getInstance().exists(key);
+  }
+
+  static async mset(keyValuePairs: { [key: string]: string }): Promise<void> {
+    return RedisService.getInstance().mset(keyValuePairs);
+  }
+
   /**
    * Initialize Redis connections
    */
@@ -645,6 +666,5 @@ export const {
   deleteSession,
   incrementCounter,
   healthCheck,
-  close,
-  getClient
+  close
 } = RedisService.getInstance();

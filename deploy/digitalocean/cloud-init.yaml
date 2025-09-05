@@ -1,0 +1,79 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+  - git
+  - ca-certificates
+  - curl
+  - gnupg
+  - lsb-release
+
+write_files:
+  - path: /root/bootstrap.sh
+    owner: root:root
+    permissions: '0755'
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      export DEBIAN_FRONTEND=noninteractive
+
+      echo "[1/6] Install Docker + Compose"
+      install -m 0755 -d /etc/apt/keyrings
+      if [ ! -f /etc/apt/keyrings/docker.gpg ]; then
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        chmod a+r /etc/apt/keyrings/docker.gpg
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release; echo $UBUNTU_CODENAME) stable" > /etc/apt/sources.list.d/docker.list
+        apt-get update
+        apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+      fi
+
+      systemctl enable docker || true
+      systemctl start docker || true
+
+      echo "[2/6] Clone repository"
+      cd /root
+      if [ ! -d CCF-planner ]; then
+        git clone https://github.com/mannyprm/CCF-planner.git
+      fi
+      cd CCF-planner
+
+      echo "[3/6] Prepare environment"
+      ENV_FILE=deploy/digitalocean/.env.production
+      if [ ! -f "$ENV_FILE" ]; then
+        cp deploy/digitalocean/.env.production.template "$ENV_FILE"
+      fi
+
+      # Generate secrets
+      JWT=$(openssl rand -hex 32)
+      DBPASS=$(openssl rand -hex 16)
+      ADMIN_PASS=$(openssl rand -hex 12)
+      ADMIN_EMAIL=admin@ccf-planner.local
+
+      sed -i "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=${DBPASS}/" "$ENV_FILE"
+      sed -i "s/^GOTRUE_JWT_SECRET=.*/GOTRUE_JWT_SECRET=${JWT}/" "$ENV_FILE"
+      sed -i "s/^JWT_SECRET=.*/JWT_SECRET=${JWT}/" "$ENV_FILE"
+      sed -i "s/^GOTRUE_ADMIN_EMAIL=.*/GOTRUE_ADMIN_EMAIL=${ADMIN_EMAIL}/" "$ENV_FILE"
+      sed -i "s/^GOTRUE_ADMIN_PASSWORD=.*/GOTRUE_ADMIN_PASSWORD=${ADMIN_PASS}/" "$ENV_FILE"
+
+      echo "[SECRETS]" > /root/ccf-secrets.txt
+      echo "JWT_SECRET=${JWT}" >> /root/ccf-secrets.txt
+      echo "POSTGRES_PASSWORD=${DBPASS}" >> /root/ccf-secrets.txt
+      echo "GOTRUE_ADMIN_EMAIL=${ADMIN_EMAIL}" >> /root/ccf-secrets.txt
+      echo "GOTRUE_ADMIN_PASSWORD=${ADMIN_PASS}" >> /root/ccf-secrets.txt
+
+      echo "[4/6] Bring up docker compose stack"
+      docker compose -f deploy/digitalocean/docker-compose.production.yml --env-file "$ENV_FILE" up -d
+
+      echo "[5/6] Wait for services"
+      # Wait up to ~5 minutes for nginx and appflowy services to be ready
+      for i in {1..60}; do
+        if curl -sf http://localhost/health >/dev/null 2>&1; then echo "nginx healthy"; break; fi; sleep 5; done
+      for i in {1..60}; do
+        if curl -sf http://localhost/gotrue/health >/dev/null 2>&1; then echo "gotrue healthy"; break; fi; sleep 5; done
+
+      echo "[6/6] Done. Access AppFlowy at http://<droplet-ip>/"
+
+runcmd:
+  - [ bash, -lc, /root/bootstrap.sh ]
+
+final_message: "CCF-planner + AppFlowy deployment finished via cloud-init. Secrets at /root/ccf-secrets.txt"

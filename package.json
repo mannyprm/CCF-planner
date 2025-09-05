@@ -16,6 +16,8 @@
     "test": "npm run test:backend && npm run test:frontend",
     "test:backend": "cd src/backend && npm test",
     "test:frontend": "cd src/frontend && npm test",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
     "lint": "npm run lint:backend && npm run lint:frontend",
     "lint:backend": "cd src/backend && npm run lint",
     "lint:frontend": "cd src/frontend && npm run lint",
@@ -24,11 +26,15 @@
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
+    "appflowy:deploy": "./scripts/deploy/deploy-appflowy.sh",
+    "appflowy:setup": "cp .env.appflowy.template .env && echo 'Please configure your .env file'",
+    "appflowy:health": "curl -f http://localhost:6780/health && curl -f http://localhost:6781/health && curl -f http://localhost:6782",
     "setup": "npm install && npm run setup:backend && npm run setup:frontend",
     "setup:backend": "cd src/backend && npm install",
     "setup:frontend": "cd src/frontend && npm install"
   },
   "devDependencies": {
+    "@playwright/test": "^1.46.1",
     "concurrently": "^8.2.0",
     "prettier": "^3.0.0"
   }
